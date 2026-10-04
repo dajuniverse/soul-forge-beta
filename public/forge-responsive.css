@@ -1,0 +1,7 @@
+.armory .section-heading>div:last-child{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.armory .button{min-height:40px;white-space:nowrap}
+.result-dialog small{color:var(--muted);font:10px 'IBM Plex Mono'}
+.research-dialog p{color:var(--ember);font:11px 'IBM Plex Mono'}.research-card{border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:15px 0;margin:15px 0;display:grid;gap:10px}.research-card div{display:flex;justify-content:space-between;gap:20px;font-size:12px;color:var(--muted)}.research-card strong{color:var(--paper);font-weight:500}.research-card .soul{color:var(--ember)}
+.rank{width:100%;border:0;border-bottom:1px solid var(--line);text-align:left;color:var(--paper);cursor:pointer;font:inherit}.rank:hover{background:#252019}
+@media(max-width:760px){.armory .section-heading{align-items:flex-start;gap:15px}.armory .section-heading>div:last-child{width:100%;justify-content:stretch}.armory .section-heading .button{flex:1 1 calc(50% - 8px);padding:10px 8px;font-size:10px}.armory .section-heading .button:last-child{flex-basis:100%}.dispatch-copy .button{width:100%}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important;transition-duration:.01ms!important}}

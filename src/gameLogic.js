@@ -11,6 +11,22 @@ const FORGE_GRADES = [
   { grade: 'C', chance: 52, powerMin: 1, powerMax: 4 }
 ];
 
+const SUMMON_RARITIES = [
+  { rarity: 'common', chance: 48, powerMin: 12, powerMax: 18 },
+  { rarity: 'uncommon', chance: 28, powerMin: 18, powerMax: 26 },
+  { rarity: 'rare', chance: 15, powerMin: 26, powerMax: 38 },
+  { rarity: 'epic', chance: 7, powerMin: 38, powerMax: 54 },
+  { rarity: 'legendary', chance: 2, powerMin: 54, powerMax: 76 }
+];
+
+const RELIC_NAMES = {
+  ember: ['Cinder Fang', 'Red Kiln Edge', 'Ashen Oath'],
+  tide: ['Tideglass Needle', 'Drowned Crescent', 'Blue Current'],
+  gale: ['Galehook', 'Quiet Tempest', 'Windcut Relic']
+};
+
+const AFFIXES = ['attack', 'defense', 'critical', 'tempo'];
+
 export function counterMultiplier(attackerAura, defenderAura) {
   if (ADVANTAGE[attackerAura] === defenderAura) return 1.25;
   if (ADVANTAGE[defenderAura] === attackerAura) return 0.85;
@@ -69,4 +85,43 @@ export function rollReforge({ item, soulShards }) {
     stat_options: { attack, defense },
     absolute_soul: absoluteSoul
   };
+}
+
+export function rollSummon({ soulShards, cost = 100 }) {
+  if (soulShards < cost) {
+    const error = new Error('INSUFFICIENT_SOUL_SHARDS');
+    error.status = 409;
+    throw error;
+  }
+  const roll = randomInt(1, 101);
+  let threshold = 0;
+  const rarity = SUMMON_RARITIES.find((candidate) => { threshold += candidate.chance; return roll <= threshold; }) ?? SUMMON_RARITIES[0];
+  const aura = AURAS[randomInt(0, AURAS.length)];
+  const affixCount = rarity.rarity === 'legendary' ? 4 : rarity.rarity === 'epic' ? 3 : rarity.rarity === 'rare' ? 2 : 1;
+  const chosen = [...AFFIXES].sort(() => randomInt(-1, 2)).slice(0, affixCount);
+  const statOptions = Object.fromEntries(chosen.map((key) => [key, key === 'critical' ? randomInt(3, 10) : key === 'tempo' ? randomInt(2, 8) : randomInt(4, 13)]));
+  const absoluteSoul = rarity.rarity === 'legendary' || randomInt(1, 101) <= 4
+    ? { id: `${aura}-echo`, label: `${aura[0].toUpperCase()}${aura.slice(1)} Echo`, damage_percent: rarity.rarity === 'legendary' ? 14 : 6 }
+    : null;
+  return {
+    cost,
+    name: RELIC_NAMES[aura][randomInt(0, RELIC_NAMES[aura].length)],
+    aura,
+    rarity: rarity.rarity,
+    level: 1,
+    power: randomInt(rarity.powerMin, rarity.powerMax + 1),
+    stat_options: statOptions,
+    absolute_soul: absoluteSoul
+  };
+}
+
+export function upgradeItem({ item, soulShards }) {
+  const cost = 30 + item.level * 12;
+  if (soulShards < cost) {
+    const error = new Error('INSUFFICIENT_SOUL_SHARDS');
+    error.status = 409;
+    throw error;
+  }
+  const nextLevel = item.level + 1;
+  return { cost, level: nextLevel, power: item.power + 4 + Math.floor(nextLevel / 5), stat_options: item.stat_options };
 }

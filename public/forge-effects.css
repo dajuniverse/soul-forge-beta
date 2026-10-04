@@ -1,0 +1,14 @@
+.combat-stage.grade-rare .hero img{filter:drop-shadow(0 0 12px #70a9c0)}
+.combat-stage.grade-epic .hero img{filter:drop-shadow(0 0 15px #bc90d5)}
+.combat-stage.grade-legendary .hero img{filter:drop-shadow(0 0 20px #ffd88e)}
+.combat-stage.grade-epic .slash-fx{border-color:#bc90d5;box-shadow:0 0 18px #bc90d5}
+.combat-stage.grade-legendary .slash-fx{border-color:#ffd88e;box-shadow:0 0 24px #ffd88e}
+.result-dialog.rare{border-color:#70a9c0;box-shadow:0 0 28px #70a9c044,0 28px 80px #000b}
+.result-dialog.rare .result-sheen{background:#70a9c055}
+.combat-stage.vault-opening .stage-lamp{animation:lampPulse 620ms ease-in-out infinite alternate}
+.combat-stage.vault-opening .hero img{animation:vaultFloat 620ms ease-in-out infinite alternate}
+.combat-stage.forge-opening .stage-lamp{background:#e0a16866;animation:forgeHeat 620ms ease-in-out infinite alternate}
+.combat-stage.forge-opening .hero img{animation:forgeHeat 620ms ease-in-out infinite alternate}
+@keyframes lampPulse{from{opacity:.35;transform:scale(.72)}to{opacity:1;transform:scale(1.18)}}
+@keyframes vaultFloat{from{transform:rotate(-28deg) translateY(5px)}to{transform:rotate(12deg) translateY(-16px) scale(1.18)}}
+@keyframes forgeHeat{from{filter:drop-shadow(0 0 7px #e0a168)}to{filter:drop-shadow(0 0 26px #ffd88e) brightness(1.5)}}

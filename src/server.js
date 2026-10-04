@@ -4,7 +4,7 @@ import helmet from 'helmet';
 import pinoHttp from 'pino-http';
 import { createClient } from '@supabase/supabase-js';
 import { z } from 'zod';
-import { rollReforge, simulateBattle } from './gameLogic.js';
+import { rollReforge, rollSummon, simulateBattle, upgradeItem } from './gameLogic.js';
 
 const required = ['SUPABASE_URL', 'SUPABASE_ANON_KEY', 'SUPABASE_SERVICE_ROLE_KEY'];
 for (const key of required) if (!process.env[key]) throw new Error(`${key} is required`);
@@ -15,7 +15,8 @@ app.use(helmet({
     directives: {
       defaultSrc: ["'self'"],
       scriptSrc: ["'self'", 'https://cdn.jsdelivr.net'],
-      styleSrc: ["'self'", "'unsafe-inline'"],
+      styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+      fontSrc: ["'self'", 'https://fonts.gstatic.com', 'data:'],
       imgSrc: ["'self'", 'data:', 'blob:'],
       connectSrc: ["'self'", 'https://*.supabase.co', 'wss://*.supabase.co']
     }
@@ -38,6 +39,8 @@ async function requireUser(req, res, next) {
 
 const challengeSchema = z.object({ floor: z.number().int().positive(), item_id: z.string().uuid() });
 const reforgeSchema = z.object({ item_id: z.string().uuid() });
+const drawSchema = z.object({ cost: z.number().int().min(100).max(100) });
+const upgradeSchema = z.object({ item_id: z.string().uuid() });
 const leaderboardSchema = z.object({ limit: z.coerce.number().int().min(1).max(50).default(20) });
 const profileSchema = z.object({ display_name: z.string().trim().min(2).max(20).regex(/^[^<>]{2,20}$/) });
 
@@ -137,6 +140,40 @@ app.post('/v1/items/reforge', requireUser, async (req, res, next) => {
     const committed = await admin.rpc('commit_reforge', {
       p_user_id: req.user.id, p_item_id: itemId, p_cost: roll.cost,
       p_power: roll.power, p_stat_options: roll.stat_options, p_absolute_soul: roll.absolute_soul, p_forge_grade: roll.forge_grade
+    });
+    if (committed.error) throw committed.error;
+    res.json({ item_id: itemId, ...roll, soul_shards: committed.data?.[0]?.soul_shards });
+  } catch (error) { next(error); }
+});
+
+app.post('/v1/armory/draw', requireUser, async (req, res, next) => {
+  try {
+    const { cost } = drawSchema.parse(req.body);
+    const userResult = await admin.from('users').select('soul_shards').eq('id', req.user.id).single();
+    if (userResult.error) throw userResult.error;
+    const roll = rollSummon({ soulShards: userResult.data.soul_shards, cost });
+    const committed = await admin.rpc('draw_relic', {
+      p_user_id: req.user.id, p_cost: roll.cost, p_name: roll.name, p_aura: roll.aura,
+      p_rarity: roll.rarity, p_level: roll.level, p_power: roll.power,
+      p_stat_options: roll.stat_options, p_absolute_soul: roll.absolute_soul
+    });
+    if (committed.error) throw committed.error;
+    const committedItem = committed.data?.[0];
+    res.json({ item_id: committedItem?.item_id, soul_shards: committedItem?.soul_shards, draw_count: committedItem?.draw_count, ...roll, rarity: committedItem?.rarity ?? roll.rarity });
+  } catch (error) { next(error); }
+});
+
+app.post('/v1/armory/upgrade', requireUser, async (req, res, next) => {
+  try {
+    const { item_id: itemId } = upgradeSchema.parse(req.body);
+    const itemResult = await admin.from('items').select('id, level, power, stat_options').eq('id', itemId).eq('owner_id', req.user.id).single();
+    if (itemResult.error) return res.status(404).json({ error: 'ITEM_NOT_FOUND' });
+    const userResult = await admin.from('users').select('soul_shards').eq('id', req.user.id).single();
+    if (userResult.error) throw userResult.error;
+    const roll = upgradeItem({ item: itemResult.data, soulShards: userResult.data.soul_shards });
+    const committed = await admin.rpc('upgrade_item', {
+      p_user_id: req.user.id, p_item_id: itemId, p_cost: roll.cost,
+      p_level: roll.level, p_power: roll.power, p_stat_options: roll.stat_options
     });
     if (committed.error) throw committed.error;
     res.json({ item_id: itemId, ...roll, soul_shards: committed.data?.[0]?.soul_shards });

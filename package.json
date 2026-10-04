@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "node --watch src/server.js",
     "start": "node src/server.js",
-    "check": "node --check src/server.js && node --check src/gameLogic.js"
+    "check": "node --check src/server.js && node --check src/gameLogic.js && node --check public/app.js",
+    "test": "node --test tests/gameLogic.test.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.4",
