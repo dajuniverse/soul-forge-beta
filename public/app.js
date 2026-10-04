@@ -13,26 +13,57 @@ function initPhaser() {
   if (!window.Phaser) return;
   class CombatScene extends Phaser.Scene {
     constructor() { super('CombatScene'); }
+    preload() {
+      this.load.image('weapon-ember', '/assets/weapons/ember-sword.png');
+      this.load.image('weapon-gale', '/assets/weapons/gale-sword.png');
+      this.load.image('weapon-tide', '/assets/weapons/tide-sword.png');
+      this.load.image('weapon-legacy', '/assets/weapons/legacy-sword.png');
+    }
     create() {
       phaserScene = this;
       this.fx = this.add.graphics();
+      this.slash = this.add.graphics();
+      this.weapon = this.add.image(240, 150, 'weapon-legacy').setScale(4).setAngle(-25).setDepth(8);
+      this.weapon.setOrigin(0.5, 0.82);
+      this.weapon.setTint(0xf0c98f);
+      this.weapon.visible = false;
+      this.hitText = this.add.text(0, 0, '', { fontFamily: 'monospace', fontSize: '24px', fontStyle: 'bold', color: '#f6d39a', stroke: '#17191e', strokeThickness: 5 }).setOrigin(0.5).setDepth(12).setAlpha(0);
+      this.stateText = this.add.text(0, 0, '', { fontFamily: 'monospace', fontSize: '11px', letterSpacing: 2, color: '#c8ceda' }).setOrigin(0.5).setDepth(12).setAlpha(0);
       this.scale.on('resize', () => this.fx.clear());
     }
-    triggerImpact(victory) {
+    triggerImpact(victory, aura = 'ember', damage = 0, bossHp = 0) {
       const { width, height } = this.scale;
-      const cx = width * .51; const cy = height * .49;
-      this.fx.clear(); this.fx.alpha = 1;
-      const rings = [12, 28, 48, 72];
+      const playerX = width * .27; const bossX = width * .73; const cy = height * .5;
+      const cx = (playerX + bossX) / 2;
+      const texture = this.textures.exists(`weapon-${aura}`) ? `weapon-${aura}` : 'weapon-legacy';
+      this.weapon.setTexture(texture).setPosition(playerX, cy - 22).setAngle(-25).setAlpha(1).setScale(4).setVisible(true);
+      this.weapon.setTint(aura === 'gale' ? 0xbad9ff : aura === 'tide' ? 0x9ed9e0 : 0xf0c98f);
+      this.hitText.setPosition(bossX, cy - 48).setText(`-${damage}`).setAlpha(1).setScale(0.7);
+      this.stateText.setPosition(cx, cy + 85).setText(victory ? 'ARMOR BREACHED' : 'COUNTERED').setAlpha(1);
+      this.fx.clear(); this.fx.alpha = 1; this.slash.clear(); this.slash.alpha = 1;
+      const rings = victory ? [14, 30, 52, 78] : [12, 24, 38];
       rings.forEach((radius, index) => {
         this.fx.lineStyle(2, victory ? 0xe1a86b : 0xb97562, 0.85 - index * .15);
-        this.fx.strokeCircle(cx, cy, radius);
+        this.fx.strokeCircle(bossX, cy, radius);
         this.tweens.add({ targets: this.fx, alpha: 0, duration: 720, delay: index * 45, ease: 'Cubic.Out', onComplete: () => this.fx.clear() });
       });
-      for (let i = 0; i < 18; i += 1) {
-        const shard = this.add.rectangle(cx, cy, 3, 3, victory ? 0xe6c58e : 0xc98168);
-        const angle = (Math.PI * 2 * i) / 18;
-        this.tweens.add({ targets: shard, x: cx + Math.cos(angle) * (60 + i * 3), y: cy + Math.sin(angle) * (60 + i * 3), alpha: 0, angle: 120, duration: 560 + i * 12, ease: 'Cubic.Out', onComplete: () => shard.destroy() });
+      this.tweens.add({ targets: this.weapon, x: bossX, y: cy + 6, angle: victory ? 18 : 42, duration: 300, ease: 'Cubic.In', onComplete: () => {
+        this.weapon.setVisible(false);
+        this.drawSlash(bossX, cy, victory);
+      }});
+      for (let i = 0; i < (victory ? 26 : 15); i += 1) {
+        const shard = this.add.rectangle(bossX, cy, victory ? 4 : 3, victory ? 4 : 3, victory ? 0xe6c58e : 0xc98168).setDepth(7);
+        const angle = (Math.PI * 2 * i) / (victory ? 26 : 15);
+        this.tweens.add({ targets: shard, x: bossX + Math.cos(angle) * (55 + i * 3), y: cy + Math.sin(angle) * (55 + i * 3), alpha: 0, angle: 120, duration: 560 + i * 12, ease: 'Cubic.Out', onComplete: () => shard.destroy() });
       }
+      this.tweens.add({ targets: this.hitText, y: cy - 86, alpha: 0, duration: 850, ease: 'Cubic.Out' });
+      this.tweens.add({ targets: this.stateText, alpha: 0, duration: 1000, delay: 250 });
+    }
+    drawSlash(x, y, victory) {
+      this.slash.clear();
+      this.slash.lineStyle(victory ? 7 : 4, victory ? 0xf3d19a : 0xd17c6d, 0.95);
+      this.slash.beginPath(); this.slash.arc(x, y, victory ? 54 : 40, Phaser.Math.DegToRad(205), Phaser.Math.DegToRad(335)); this.slash.strokePath(); this.slash.closePath();
+      this.tweens.add({ targets: this.slash, alpha: 0, duration: 380, ease: 'Cubic.Out', onComplete: () => this.slash.clear() });
     }
   }
   new Phaser.Game({ type: Phaser.CANVAS, parent: 'phaserCanvas', width: 900, height: 300, transparent: true, scale: { mode: Phaser.Scale.RESIZE, autoCenter: Phaser.Scale.CENTER_BOTH }, scene: CombatScene, render: { antialias: false, pixelArt: true } });
@@ -74,7 +105,8 @@ function renderTower() {
 function itemCard(item) {
   const selected = state.selectedItem?.id === item.id ? ' selected' : '';
   const soul = item.absolute_soul ? ` · ${item.absolute_soul.label}` : '';
-  return `<button class="item-card${selected}" data-item-id="${item.id}"><span class="rarity">${item.rarity}<span class="grade-mark grade-${item.forge_grade || 'C'}">${item.forge_grade || 'C'}</span></span><div class="item-name">${escapeHtml(item.name)}</div><div class="item-meta">${auraKorean[item.aura]} · LV.${item.level}</div><div class="item-stats">POW ${item.power} · ATK ${item.stat_options?.attack ?? 0} · DEF ${item.stat_options?.defense ?? 0}${escapeHtml(soul)}</div></button>`;
+  const weapon = ['ember', 'gale', 'tide'].includes(item.aura) ? item.aura : 'legacy';
+  return `<button class="item-card${selected}" data-item-id="${item.id}"><span class="item-weapon"><img src="/assets/weapons/${weapon}-sword.png" alt="${auraKorean[item.aura] || '무기'} 무기" /></span><span class="rarity">${item.rarity}<span class="grade-mark grade-${item.forge_grade || 'C'}">${item.forge_grade || 'C'}</span></span><div class="item-name">${escapeHtml(item.name)}</div><div class="item-meta">${auraKorean[item.aura]} · LV.${item.level}</div><div class="item-stats">POW ${item.power} · ATK ${item.stat_options?.attack ?? 0} · DEF ${item.stat_options?.defense ?? 0}${escapeHtml(soul)}</div></button>`;
 }
 
 function renderItems() {
@@ -212,10 +244,15 @@ async function challenge() {
 function playCombat(result) {
   const arena = $('battlefield').querySelector('.arena'); const caption = $('combatCaption');
   arena.classList.remove('playing', 'victory'); void arena.offsetWidth; arena.classList.add('playing');
-  if (result.aura_multiplier > 1) { caption.textContent = 'PERFECT STRIKE'; $('battleTitle').textContent = '상성의 틈을 정확히 꿰뚫었습니다'; }
-  else { caption.textContent = result.won ? 'BREACH CONFIRMED' : 'IMPACT REGISTERED'; $('battleTitle').textContent = result.won ? '보스의 방어선이 무너집니다' : '공격을 분석했지만, 탑은 버텼습니다'; }
-  $('battleSubtitle').textContent = `피해량 ${result.damage} · 전투 마진 ${result.combat_margin}`;
-  phaserScene?.triggerImpact(result.won);
+  $('bossCombatName').textContent = state.tower?.boss?.name || 'BOSS';
+  $('playerCombatState').textContent = `${auraNames[state.selectedItem?.aura] || 'WEAPON'} / ${state.selectedItem?.power || 0} POW`;
+  $('bossCombatState').textContent = result.won ? 'BREAKING' : 'HOLDING';
+  if (result.aura_multiplier > 1 && result.won) { caption.textContent = 'PERFECT STRIKE'; $('battleTitle').textContent = '상성의 틈을 정확히 꿰뚫었습니다'; }
+  else if (result.aura_multiplier > 1) { caption.textContent = 'ADVANTAGE HELD'; $('battleTitle').textContent = '상성은 유리했지만 보스가 공격을 버텼습니다'; }
+  else if (result.won) { caption.textContent = 'POWER BREAK'; $('battleTitle').textContent = '스펙으로 불리함을 돌파했습니다'; }
+  else { caption.textContent = 'COUNTERED'; $('battleTitle').textContent = '보스가 공격을 받아냈습니다'; }
+  $('battleSubtitle').textContent = `이번 타격 ${result.damage} · 전투 마진 ${result.combat_margin} · ${result.won ? '방어선 붕괴' : '보스 잔존'}`;
+  phaserScene?.triggerImpact(result.won, state.selectedItem?.aura, result.damage, state.tower?.boss?.hp);
   if (result.won) { arena.classList.add('victory'); showToast(`층 돌파 성공 · +${result.state?.soul_shards ?? ''} 영혼 파편`); }
 }
 
