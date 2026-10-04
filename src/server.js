@@ -144,10 +144,12 @@ app.post('/v1/items/reforge', requireUser, async (req, res, next) => {
 });
 
 app.use((error, _req, res, _next) => {
+  const safeDetails = { message: error.message, code: error.code, details: error.details, hint: error.hint };
+  _req.log?.error({ err: safeDetails }, 'request failed');
   if (error instanceof z.ZodError) return res.status(400).json({ error: 'INVALID_REQUEST', details: error.flatten() });
   const knownConflict = ['INSUFFICIENT_SOUL_SHARDS', 'STALE_TOWER_STATE', 'INVALID_FLOOR'];
   const status = error.status ?? (knownConflict.some((code) => String(error.message).includes(code)) ? 409 : 500);
-  res.status(status).json({ error: status === 500 ? 'INTERNAL_ERROR' : error.message });
+  res.status(status).json({ error: status === 500 ? 'INTERNAL_ERROR' : error.message, code: error.code ?? undefined });
 });
 
 app.use(express.static('public', { extensions: ['html'] }));
