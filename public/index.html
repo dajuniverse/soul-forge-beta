@@ -14,7 +14,7 @@
     <main class="app-shell">
       <header class="topbar">
         <div class="brand"><span class="brand-mark">SF</span><div><p class="eyebrow">SOUL FORGE / BETA</p><h1>무한의 시련</h1></div></div>
-        <div class="account"><span class="status-dot"></span><span id="connectionState">대기 중</span><span class="divider"></span><span id="shardCount">— 영혼 파편</span><button class="token-button" id="tokenButton">토큰 설정</button></div>
+        <div class="account"><span class="status-dot"></span><span id="connectionState">접속 준비 중</span><span class="divider"></span><span id="shardCount">— 영혼 파편</span></div>
       </header>
 
       <section class="hero-grid">
@@ -43,8 +43,10 @@
       <div class="toast" id="toast" role="status"></div>
       <footer><span>SOUL FORGE / PRE-ALPHA</span><span>SERVER-AUTHORITATIVE COMBAT</span></footer>
     </main>
+    <dialog id="welcomeDialog" class="welcome-dialog"><p class="eyebrow">SOUL FORGE / FIRST ENTRY</p><h2>대장장이의 이름을 정하세요</h2><p>닉네임만 입력하면 익명 계정이 자동으로 만들어집니다. 다음 방문부터는 이 브라우저에서 자동으로 이어집니다.</p><form id="welcomeForm"><label for="nicknameInput">대장장이 닉네임</label><input id="nicknameInput" name="nickname" maxlength="20" minlength="2" autocomplete="nickname" placeholder="2–20자" required /><button class="primary-button" type="submit">대장간 입장</button><small id="welcomeError"></small></form></dialog>
     <dialog id="loadoutDialog" class="loadout-dialog"><button class="dialog-close" id="dialogClose" aria-label="닫기">×</button><p class="eyebrow" id="dialogEyebrow">RESEARCH LOADOUT</p><h2 id="dialogName">—</h2><p class="dialog-floor" id="dialogFloor">—</p><div id="dialogLoadout"></div><button class="primary-button" id="dialogForge">대장간으로 돌아가기</button></dialog>
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.80.1/dist/phaser.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script type="module" src="/app.js"></script>
   </body>
 </html>

@@ -39,9 +39,21 @@ async function requireUser(req, res, next) {
 const challengeSchema = z.object({ floor: z.number().int().positive(), item_id: z.string().uuid() });
 const reforgeSchema = z.object({ item_id: z.string().uuid() });
 const leaderboardSchema = z.object({ limit: z.coerce.number().int().min(1).max(50).default(20) });
+const profileSchema = z.object({ display_name: z.string().trim().min(2).max(20).regex(/^[^<>]{2,20}$/) });
 
 app.get('/health', (_req, res) => res.json({ ok: true, service: 'soul-forge-api' }));
 app.get('/v1/config', (_req, res) => res.json({ supabase_url: process.env.SUPABASE_URL, supabase_anon_key: process.env.SUPABASE_ANON_KEY }));
+
+app.post('/v1/profile', requireUser, async (req, res, next) => {
+  try {
+    const { display_name: displayName } = profileSchema.parse(req.body);
+    const profile = await admin.from('users').update({ display_name: displayName }).eq('id', req.user.id).select('id, display_name, highest_floor, soul_shards').single();
+    if (profile.error) throw profile.error;
+    const leaderboard = await admin.from('leaderboard_profiles').update({ display_name: displayName }).eq('user_id', req.user.id);
+    if (leaderboard.error) throw leaderboard.error;
+    res.json({ profile: profile.data });
+  } catch (error) { next(error); }
+});
 
 app.get('/v1/leaderboard', async (req, res, next) => {
   try {

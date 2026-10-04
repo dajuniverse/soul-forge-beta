@@ -23,6 +23,6 @@
 
 ## Pre-Alpha 화면
 
-`npm start` 실행 후 `/`에 접속하면 `public/`의 시련의 탑 화면이 열립니다. 인증 시스템을 붙이기 전 단계이므로 상단 `토큰 설정`에 Supabase Access Token을 입력하면 아이템과 탑 상태를 불러옵니다. 토큰은 브라우저 localStorage에 저장됩니다.
+`npm start` 실행 후 `/`에 접속하면 `public/`의 시련의 탑 화면이 열립니다. 첫 접속 시 닉네임만 입력하면 Supabase 익명 계정과 프로필이 자동으로 만들어집니다. 세션은 Supabase 클라이언트가 브라우저에 저장하므로 다음 방문부터 자동 복원됩니다. Supabase Dashboard에서 Anonymous Sign-Ins를 활성화해야 합니다.
 
 랭킹은 공개 `leaderboard_profiles` 테이블을 Supabase Realtime으로 구독합니다. 최고 층수 갱신 시 별도 새로고침 없이 목록과 대표 세팅이 갱신되고, 다른 유저의 행을 클릭하면 연구용 세팅 팝업이 열립니다.

@@ -1,11 +1,11 @@
-const state = { token: localStorage.getItem('soulForgeToken') || new URLSearchParams(location.search).get('token'), items: [], selectedItem: null, tower: null, leaderboard: [], busy: false, realtime: null };
-if (state.token) localStorage.setItem('soulForgeToken', state.token);
+const state = { token: null, nickname: localStorage.getItem('soulForgeNickname') || '', items: [], selectedItem: null, tower: null, leaderboard: [], busy: false, realtime: null };
 
 const $ = (id) => document.getElementById(id);
 const auraNames = { ember: 'EMBER', tide: 'TIDE', gale: 'GALE' };
 const auraKorean = { ember: '화염', tide: '조류', gale: '질풍' };
 const advantage = { ember: 'gale', gale: 'tide', tide: 'ember' };
 let phaserScene;
+let supabaseClient;
 const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
 function currentUserId() { try { return state.token ? JSON.parse(atob(state.token.split('.')[1])).sub : null; } catch { return null; } }
 
@@ -53,6 +53,11 @@ function setAura(element, aura) { element.textContent = auraNames[aura] || aura;
 function renderTower() {
   const { progress, boss } = state.tower;
   const profile = Array.isArray(progress.users) ? progress.users[0] : progress.users;
+  state.nickname = profile?.display_name || state.nickname;
+  if (state.nickname) {
+    localStorage.setItem('soulForgeNickname', state.nickname);
+    setConnection(`접속됨: ${state.nickname}`, true);
+  }
   $('currentFloor').textContent = String(progress.current_floor).padStart(2, '0');
   $('highestFloor').textContent = `최고 기록 ${profile?.highest_floor ?? 0}층`;
   $('shardCount').textContent = `${profile?.soul_shards ?? 0} 영혼 파편`;
@@ -121,18 +126,53 @@ function openLoadout(userId) {
 }
 
 async function initRealtime() {
-  if (!window.supabase) return;
+  if (!supabaseClient) return;
   try {
-    const config = await fetch('/v1/config').then((response) => response.json());
-    const client = window.supabase.createClient(config.supabase_url, config.supabase_anon_key);
-    state.realtime = client.channel('global-leaderboard')
+    state.realtime = supabaseClient.channel('global-leaderboard')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'leaderboard_profiles' }, () => loadLeaderboard())
       .subscribe();
   } catch { showToast('실시간 랭킹 연결을 사용할 수 없습니다.'); }
 }
 
+async function initSupabase() {
+  if (!window.supabase) throw new Error('SUPABASE_CLIENT_UNAVAILABLE');
+  const config = await fetch('/v1/config').then((response) => response.json());
+  supabaseClient = window.supabase.createClient(config.supabase_url, config.supabase_anon_key);
+  const sessionResult = await supabaseClient.auth.getSession();
+  if (sessionResult.error) throw sessionResult.error;
+  if (sessionResult.data.session) {
+    state.token = sessionResult.data.session.access_token;
+    return true;
+  }
+  return false;
+}
+
+async function createAnonymousAccount(displayName) {
+  const auth = await supabaseClient.auth.signInAnonymously({ options: { data: { display_name: displayName } } });
+  if (auth.error || !auth.data.session) throw auth.error || new Error('ANONYMOUS_SIGN_IN_FAILED');
+  state.token = auth.data.session.access_token;
+  const profile = await api('/v1/profile', { method: 'POST', body: JSON.stringify({ display_name: displayName }) });
+  state.nickname = profile.profile.display_name;
+  localStorage.setItem('soulForgeNickname', state.nickname);
+}
+
+async function bootstrap() {
+  try {
+    const restored = await initSupabase();
+    if (!restored) {
+      $('welcomeDialog').showModal();
+      return;
+    }
+    setConnection(`접속됨: ${state.nickname || '대장장이'}`, true);
+    await Promise.all([loadLeaderboard(), initRealtime(), loadData()]);
+  } catch (error) {
+    setConnection('접속할 수 없음');
+    showToast(error.message === 'SUPABASE_CLIENT_UNAVAILABLE' ? '인증 모듈을 불러오지 못했습니다.' : '접속 준비에 실패했습니다.');
+  }
+}
+
 async function loadData() {
-  if (!state.token) { setConnection('토큰 필요'); showToast('Supabase 액세스 토큰을 설정해 주세요.'); $('itemGrid').innerHTML = '<div class="empty-state">상단의 토큰 설정에서 Supabase Access Token을 입력하세요.</div>'; return; }
+  if (!state.token) return;
   setConnection('동기화 중');
   try {
     const [items, tower] = await Promise.all([api('/v1/items'), api('/v1/tower/state')]);
@@ -185,5 +225,21 @@ $('forgeButton').addEventListener('click', reforge);
 $('refreshButton').addEventListener('click', loadData);
 $('dialogClose').addEventListener('click', () => $('loadoutDialog').close());
 $('dialogForge').addEventListener('click', () => { $('loadoutDialog').close(); document.querySelector('.loadout-section').scrollIntoView({ behavior: 'smooth' }); });
-$('tokenButton').addEventListener('click', () => { const token = prompt('Supabase Access Token을 입력하세요.'); if (token) { state.token = token.trim(); localStorage.setItem('soulForgeToken', state.token); loadData(); } });
-loadLeaderboard(); initRealtime(); loadData();
+$('welcomeForm').addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const input = $('nicknameInput');
+  const errorBox = $('welcomeError');
+  const displayName = input.value.trim();
+  if (displayName.length < 2 || displayName.length > 20) { errorBox.textContent = '닉네임은 2–20자로 입력해 주세요.'; return; }
+  const submit = event.currentTarget.querySelector('button[type="submit"]');
+  submit.disabled = true; errorBox.textContent = '';
+  try {
+    await createAnonymousAccount(displayName);
+    $('welcomeDialog').close();
+    setConnection(`접속됨: ${state.nickname}`, true);
+    await Promise.all([loadLeaderboard(), initRealtime(), loadData()]);
+  } catch (error) {
+    errorBox.textContent = error.message.includes('Anonymous') ? '익명 로그인이 비활성화되어 있습니다.' : '접속에 실패했습니다. 잠시 후 다시 시도해 주세요.';
+  } finally { submit.disabled = false; }
+});
+bootstrap();
