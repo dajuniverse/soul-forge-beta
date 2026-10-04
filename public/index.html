@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#111318" />
+    <title>소울 포지 — 시련의 탑</title>
+    <link rel="stylesheet" href="/styles.css" />
+    <link rel="stylesheet" href="/phaser.css" />
+    <link rel="stylesheet" href="/ranking.css" />
+    <link rel="stylesheet" href="/polish.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="topbar">
+        <div class="brand"><span class="brand-mark">SF</span><div><p class="eyebrow">SOUL FORGE / BETA</p><h1>무한의 시련</h1></div></div>
+        <div class="account"><span class="status-dot"></span><span id="connectionState">대기 중</span><span class="divider"></span><span id="shardCount">— 영혼 파편</span><button class="token-button" id="tokenButton">토큰 설정</button></div>
+      </header>
+
+      <section class="hero-grid">
+        <div class="tower-intro panel">
+          <p class="eyebrow">TRIAL TOWER</p>
+          <div class="floor-line"><span>현재 도달 층수</span><strong id="currentFloor">—</strong></div>
+          <p class="muted">다음 층의 성질을 읽고, 가장 적합한 장비를 선택하십시오.</p>
+          <div class="progress-track"><span id="floorProgress"></span></div>
+          <div class="progress-label"><span>정상으로 가는 길</span><span id="highestFloor">최고 기록 —</span></div>
+        </div>
+        <div class="boss-card panel" id="bossCard">
+          <div class="boss-card-head"><div><p class="eyebrow">NEXT ENCOUNTER</p><h2 id="bossName">탑의 정보를 불러오는 중</h2></div><span class="aura-chip" id="bossAura">—</span></div>
+          <div class="boss-metrics"><div><span>공격 패턴</span><strong id="bossPattern">—</strong></div><div><span>내구도</span><strong id="bossHp">—</strong></div><div><span>보상</span><strong id="bossReward">—</strong></div></div>
+          <p class="boss-note" id="bossNote">서버에서 다음 보스 정보를 확인하고 있습니다.</p>
+        </div>
+      </section>
+
+      <section class="battlefield panel" id="battlefield">
+        <div class="battle-copy"><p class="eyebrow">COMBAT READOUT</p><h2 id="battleTitle">장비를 선택하고 도전을 시작하세요</h2><p id="battleSubtitle" class="muted">상성은 승리를 돕지만, 스펙으로 충분히 극복할 수 있습니다.</p></div>
+        <div class="arena" aria-label="전투 연출 영역"><div class="arena-grid"></div><div class="platform"></div><div class="fighter player-fighter"><div class="weapon-glint"></div></div><div class="fighter boss-fighter"><div class="boss-core"></div></div><div id="phaserCanvas" aria-hidden="true"></div><div class="impact-burst" id="impactBurst"></div><div class="combat-caption" id="combatCaption"></div></div>
+        <div class="combat-footer"><div class="readout"><span id="selectedLoadout">선택 장비 없음</span><span class="readout-separator">/</span><span id="counterReadout">상성 대기</span></div><button class="primary-button" id="challengeButton" disabled>도전 시작 <span>↗</span></button></div>
+      </section>
+
+      <section class="loadout-section"><div class="section-heading"><div><p class="eyebrow">YOUR ARMORY</p><h2>전투 장비</h2></div><div class="section-actions"><button class="text-button" id="refreshButton">목록 새로고침</button><button class="forge-button" id="forgeButton" disabled>선택 장비 재련</button></div></div><div class="item-grid" id="itemGrid"><div class="empty-state">아이템 목록을 불러오는 중입니다.</div></div></section>
+      <section class="ranking-section"><div class="section-heading"><div><p class="eyebrow">GLOBAL ASCENT / LIVE</p><h2>세계의 탑</h2></div><span class="live-label"><i></i> REALTIME</span></div><div class="ranking-board panel"><div class="tower-spine"><div class="tower-cap"></div><div class="tower-line" id="towerLine"></div><div class="tower-base"></div></div><div class="ranking-list" id="rankingList"><div class="empty-state">랭킹을 동기화하는 중입니다.</div></div></div></section>
+      <div class="toast" id="toast" role="status"></div>
+      <footer><span>SOUL FORGE / PRE-ALPHA</span><span>SERVER-AUTHORITATIVE COMBAT</span></footer>
+    </main>
+    <dialog id="loadoutDialog" class="loadout-dialog"><button class="dialog-close" id="dialogClose" aria-label="닫기">×</button><p class="eyebrow" id="dialogEyebrow">RESEARCH LOADOUT</p><h2 id="dialogName">—</h2><p class="dialog-floor" id="dialogFloor">—</p><div id="dialogLoadout"></div><button class="primary-button" id="dialogForge">대장간으로 돌아가기</button></dialog>
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.80.1/dist/phaser.min.js"></script>
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>
