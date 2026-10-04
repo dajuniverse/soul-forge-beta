@@ -22,7 +22,7 @@ app.use(helmet({
   }
 }));
 app.use(express.json({ limit: '32kb' }));
-app.use(pinoHttp());
+app.use(pinoHttp({ redact: ['req.headers.authorization', 'req.headers.cookie'] }));
 
 const admin = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, { auth: { autoRefreshToken: false, persistSession: false } });
 const authClient = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
@@ -79,15 +79,20 @@ app.get('/v1/items', requireUser, async (req, res, next) => {
 
 app.get('/v1/tower/state', requireUser, async (req, res, next) => {
   try {
-    const progress = await admin.from('tower_progress')
-      .select('current_floor, last_result, users!inner(highest_floor, soul_shards)')
-      .eq('user_id', req.user.id).single();
+    await admin.from('users').upsert({ id: req.user.id }, { onConflict: 'id', ignoreDuplicates: true });
+    await admin.from('tower_progress').upsert({ user_id: req.user.id }, { onConflict: 'user_id', ignoreDuplicates: true });
+    const [progress, profile] = await Promise.all([
+      admin.from('tower_progress').select('current_floor, last_result').eq('user_id', req.user.id).single(),
+      admin.from('users').select('display_name, highest_floor, soul_shards').eq('id', req.user.id).single()
+    ]);
     if (progress.error) throw progress.error;
+    if (profile.error) throw profile.error;
     const boss = await admin.from('bosses')
       .select('id, floor, name, aura, base_power, hp, attack, defense, reward_shards')
-      .eq('floor', progress.data.current_floor).single();
+      .eq('floor', progress.data.current_floor).maybeSingle();
     if (boss.error) throw boss.error;
-    res.json({ progress: progress.data, boss: boss.data });
+    if (!boss.data) return res.status(503).json({ error: 'BOSS_DATA_NOT_CONFIGURED', floor: progress.data.current_floor });
+    res.json({ progress: { ...progress.data, users: profile.data }, boss: boss.data });
   } catch (error) { next(error); }
 });
 

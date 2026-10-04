@@ -4,7 +4,7 @@
 
 ## 시작
 
-1. Supabase 프로젝트에서 `supabase/migrations/001_initial_schema.sql`, `002_leaderboard_realtime.sql`, `003_reforge_grades.sql`을 순서대로 실행합니다.
+1. Supabase 프로젝트에서 `supabase/migrations/001_initial_schema.sql`, `002_leaderboard_realtime.sql`, `003_reforge_grades.sql`, `004_seed_tower_content.sql`을 순서대로 실행합니다.
 2. `.env.example`을 `.env`로 복사하고 키를 입력합니다.
 3. `npm install` 후 `npm run dev`를 실행합니다.
 
